@@ -706,10 +706,6 @@ int send_message(Message m, int socket);
 void* message_reciever_worker(void* arg);
 void* message_sender_worker(void* arg);
 
-//------- locks
-void lock(Metadata meta);
-void unlock(Metadata meta);
-
 //------- destruction
 void destructor(Arguments args, Metadata meta);
 
@@ -1139,7 +1135,6 @@ void* message_reciever_worker(void* arg){
             AES_init_ctx_iv(meta->encrypt_context, meta->key, meta->iv);
             AES_CBC_decrypt_buffer(meta->encrypt_context,message,buf_len);
             if(message[0]==ACTIVE_NODES_REQ){ // node list request
-                lock(meta);
                 //extract nickname
                 char temp_nick[20] = {0};
                 for(c = 1; c <= 20; c++){
@@ -1189,10 +1184,8 @@ void* message_reciever_worker(void* arg){
                 // Add the new ip
                 IPL_add(address.sin_addr.s_addr,&(meta->ip_list),temp_nick);
                 meta->ip_count++;
-                //
-                unlock(meta);
+                
                 send_message_encrypted(ip_list_message, new_socket, meta);
-                free(ip_list_message->message);
                 free(ip_list_message);
                 close(new_socket);
             }
@@ -1447,15 +1440,6 @@ void* message_sender_worker(void* arg){
     return 0;
 }
 
-// Locks
-void lock(Metadata meta){
-    while(meta->lock);
-    meta->lock = 1;
-}
-
-void unlock(Metadata meta){
-    meta->lock = 0;
-}
 
 // Destruction
 void destructor(Arguments args, Metadata meta){
